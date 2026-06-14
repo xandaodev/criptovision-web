@@ -1,16 +1,24 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute'; // Importa o guardião
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota raiz (/) abre o Login */}
+        {/* Rota pública: qualquer pessoa pode aceder */}
         <Route path="/" element={<Login />} />
         
-        {/* Rota (/dashboard) abre o Dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        {/* Rota privada: embrulhada pelo ProtectedRoute */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </BrowserRouter>
   );

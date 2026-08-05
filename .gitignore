@@ -7,18 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependências
 node_modules
-.pnp
-.pnp.js
-
-# Produção / Builds
 dist
 dist-ssr
-
-# Arquivos de Ambiente 
-.env
-.env.*
 *.local
 
 # Editor directories and files
@@ -31,4 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.eslintcache

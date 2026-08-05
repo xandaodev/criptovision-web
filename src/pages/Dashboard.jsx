@@ -1,3 +1,4 @@
+import Select from 'react-select';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -24,9 +25,37 @@ function Dashboard() {
   const [salvandoAporte, setSalvandoAporte] = useState(false);
   const [tipoOperacao, setTipoOperacao] = useState('COMPRA');
 
+  const [opcoesMoedas, setOpcoesMoedas] = useState([]);
+
   useEffect(() => {
     carregarTudo();
+    carregarMoedasDaBinance();
   }, []);
+
+  const carregarMoedasDaBinance = async () => {
+    try {
+      const resposta = await fetch('https://api.binance.com/api/v3/ticker/price');
+      const dados = await resposta.json();
+      
+      // Filtramos apenas as moedas pareadas em USDT (Dólar) para a lista ficar limpa
+      const moedasFormatadas = dados
+        .filter(item => item.symbol.endsWith('USDT'))
+        .map(item => {
+          const ticker = item.symbol.replace('USDT', '');
+          return { value: ticker, label: ticker }; // O react-select exige este formato
+        });
+      
+      // Adiciona o USDT à mão caso não venha no filtro
+      moedasFormatadas.push({ value: 'USDT', label: 'USDT' });
+      
+      // Ordena de A a Z
+      moedasFormatadas.sort((a, b) => a.label.localeCompare(b.label));
+      
+      setOpcoesMoedas(moedasFormatadas);
+    } catch (erro) {
+      console.error("Erro ao puxar lista da Binance:", erro);
+    }
+  };
 
   const carregarTudo = async () => {
     setCarregando(true);
@@ -204,16 +233,53 @@ function Dashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-gray-900 text-gray-400 text-sm uppercase tracking-wider">
-                          <th className="p-4 font-medium">Ativo (Ticker)</th><th className="p-4 font-medium">Saldo (Qtd)</th><th className="p-4 font-medium">Cotação Atual</th><th className="p-4 font-medium">Total Estimado</th><th className="p-4 font-medium">PNL (%)</th>
+                        <tr className="bg-gray-900 text-gray-400 text-xs uppercase tracking-wider">
+                          <th className="p-4 font-medium">Ativo</th>
+                          <th className="p-4 font-medium">Saldo</th>
+                          <th className="p-4 font-medium text-blue-300">Preço Médio</th>
+                          <th className="p-4 font-medium">Cotação Atual</th>
+                          <th className="p-4 font-medium text-purple-400">PNL (24h)</th>
+                          <th className="p-4 font-medium text-green-400">PNL (Total)</th>
+                          <th className="p-4 font-medium">Total Estimado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-700">
                         {ativos.length > 0 ? ativos.map((ativo, index) => (
-                          <tr key={index} className="hover:bg-gray-750">
-                            <td className="p-4 font-bold text-white">{ativo.ticker}</td><td className="p-4 text-gray-300">{ativo.saldo}</td><td className="p-4 text-gray-300">$ {ativo.precoAtual.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td><td className="p-4 font-bold text-blue-400">$ {ativo.valorTotalUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td><td className={`p-4 font-bold ${ativo.porcentagemPNL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{ativo.porcentagemPNL >= 0 ? '+' : ''}{ativo.porcentagemPNL.toFixed(2)}%</td>
+                          <tr key={index} className="hover:bg-gray-750 transition duration-150">
+                            <td className="p-4 font-bold text-white">{ativo.ticker}</td>
+                            
+                            <td className="p-4 text-gray-300">{ativo.saldo}</td>
+                            
+                            {/* NOVA COLUNA: PREÇO MÉDIO */}
+                            <td className="p-4 text-gray-300">
+                              $ {ativo.precoMedio ? ativo.precoMedio.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}
+                            </td>
+                            
+                            <td className="p-4 text-gray-300">
+                              $ {ativo.precoAtual.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </td>
+
+                            {/* NOVA COLUNA: PNL 24 HORAS (Depende do seu Java enviar o campo variacao24h) */}
+                            <td className={`p-4 font-bold ${ativo.variacao24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {ativo.variacao24h >= 0 ? '+' : ''}{ativo.variacao24h ? ativo.variacao24h.toFixed(2) : '0.00'}%
+                            </td>
+
+                            {/* PNL TOTAL (O que você já tinha) */}
+                            <td className={`p-4 font-bold ${ativo.porcentagemPNL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {ativo.porcentagemPNL >= 0 ? '+' : ''}{ativo.porcentagemPNL.toFixed(2)}%
+                            </td>
+                            
+                            <td className="p-4 font-bold text-blue-400">
+                              $ {ativo.valorTotalUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </td>
                           </tr>
-                        )) : <tr><td colSpan="5" className="p-8 text-center text-gray-500">Sua carteira está vazia.</td></tr>}
+                        )) : (
+                          <tr>
+                            <td colSpan="7" className="p-8 text-center text-gray-500">
+                              Sua carteira está vazia.
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -263,7 +329,48 @@ function Dashboard() {
           <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md">
             <h2 className="text-2xl font-bold text-white mb-6">Registrar Transação</h2>
             <form onSubmit={handleNovoAporte} className="space-y-4">
-              <div><label className="block text-gray-400 text-sm mb-1">Moeda (Ticker)</label><input type="text" required className="w-full bg-gray-900 border border-gray-700 text-white rounded p-3 uppercase focus:outline-none focus:border-blue-500" value={novoTicker} onChange={(e) => setNovoTicker(e.target.value)} /></div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Moeda (Ticker)</label>
+                <Select
+                  options={opcoesMoedas}
+                  placeholder="Pesquise ou selecione..."
+                  isLoading={opcoesMoedas.length === 0}
+                  loadingMessage={() => "A carregar mercado..."}
+                  noOptionsMessage={() => "Moeda não encontrada"}
+                  // Quando escolhe, guarda apenas a sigla (value) no estado novoTicker
+                  onChange={(opcao) => setNovoTicker(opcao ? opcao.value : '')}
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      backgroundColor: '#111827', // bg-gray-900
+                      borderColor: '#374151', // border-gray-700
+                      padding: '2px',
+                      boxShadow: 'none',
+                      '&:hover': { borderColor: '#3b82f6' } // focus:border-blue-500
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      backgroundColor: '#1f2937', // bg-gray-800
+                      border: '1px solid #374151',
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isFocused ? '#374151' : 'transparent',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      color: '#ffffff',
+                      textTransform: 'uppercase',
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      color: '#ffffff',
+                    }),
+                  }}
+                />
+              </div>
               <div><label className="block text-gray-400 text-sm mb-1">Tipo de Operação</label><select className="w-full bg-gray-900 border border-gray-700 text-white rounded p-3 focus:outline-none focus:border-blue-500" value={tipoOperacao} onChange={(e) => setTipoOperacao(e.target.value)}><option value="COMPRA">COMPRA</option><option value="VENDA">VENDA</option></select></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-gray-400 text-sm mb-1">Quantidade</label><input type="number" step="any" required className="w-full bg-gray-900 border border-gray-700 text-white rounded p-3 focus:outline-none focus:border-blue-500" value={novaQuantidade} onChange={(e) => setNovaQuantidade(e.target.value)} /></div>

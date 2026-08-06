@@ -2,10 +2,12 @@ import type { PortfolioAsset } from '../types/portfolio.ts'
 import {
   formatPercentage,
   formatQuantity,
+  formatQuoteAge,
   formatUsdPrice,
   formatUsdTotal,
   getPerformanceClass,
 } from '../utils/portfolio-formatters.ts'
+import { hasAvailableQuote } from '../utils/portfolio-quotes.ts'
 
 type PortfolioAssetTableProps = {
   assets: PortfolioAsset[]
@@ -13,9 +15,20 @@ type PortfolioAssetTableProps = {
 }
 
 export function PortfolioAssetTable({ assets, totalValue }: PortfolioAssetTableProps) {
-  const orderedAssets = [...assets].sort(
-    (first, second) => second.valorTotalUSD - first.valorTotalUSD,
-  )
+  const orderedAssets = [...assets].sort((first, second) => {
+    const firstHasQuote = hasAvailableQuote(first)
+    const secondHasQuote = hasAvailableQuote(second)
+
+    if (firstHasQuote && secondHasQuote) {
+      return second.valorTotalUSD - first.valorTotalUSD
+    }
+
+    if (firstHasQuote !== secondHasQuote) {
+      return firstHasQuote ? -1 : 1
+    }
+
+    return first.ticker.localeCompare(second.ticker)
+  })
 
   return (
     <article className="portfolio-panel portfolio-assets">
@@ -43,12 +56,22 @@ export function PortfolioAssetTable({ assets, totalValue }: PortfolioAssetTableP
           </thead>
           <tbody>
             {orderedAssets.map((asset) => {
-              const absolutePnl = asset.saldo * (asset.precoAtual - asset.precoMedio)
+              const quoteAvailable = hasAvailableQuote(asset)
+              const absolutePnl = quoteAvailable
+                ? asset.saldo * (asset.precoAtual - asset.precoMedio)
+                : null
               const participation =
-                totalValue > 0 ? (asset.valorTotalUSD / totalValue) * 100 : 0
+                quoteAvailable && totalValue > 0
+                  ? (asset.valorTotalUSD / totalValue) * 100
+                  : null
 
               return (
-                <tr key={asset.ticker}>
+                <tr
+                  className={
+                    quoteAvailable ? undefined : 'portfolio-table__row--unavailable'
+                  }
+                  key={asset.ticker}
+                >
                   <td>
                     <div className="portfolio-asset-identity">
                       <span className="portfolio-asset-mark">
@@ -62,30 +85,67 @@ export function PortfolioAssetTable({ assets, totalValue }: PortfolioAssetTableP
                     <small>{asset.ticker}</small>
                   </td>
                   <td>{formatUsdPrice(asset.precoMedio)}</td>
-                  <td>{formatUsdPrice(asset.precoAtual)}</td>
                   <td>
-                    <strong>{formatUsdTotal(asset.valorTotalUSD)}</strong>
+                    {quoteAvailable ? (
+                      <>
+                        <strong>{formatUsdPrice(asset.precoAtual)}</strong>
+                        {asset.cotacaoDesatualizada && (
+                          <small className="portfolio-quote-note portfolio-quote-note--stale">
+                            Cotação anterior — {formatQuoteAge(asset.cotacaoAtualizadaEm)}
+                          </small>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <strong className="portfolio-quote-unavailable">
+                          Cotação indisponível
+                        </strong>
+                        <small>Posição preservada</small>
+                      </>
+                    )}
                   </td>
                   <td>
-                    <strong className={getPerformanceClass(absolutePnl)}>
-                      {formatUsdTotal(absolutePnl)}
+                    <strong>
+                      {quoteAvailable ? formatUsdTotal(asset.valorTotalUSD) : '—'}
                     </strong>
-                    <small className={getPerformanceClass(asset.porcentagemPNL)}>
-                      {formatPercentage(asset.porcentagemPNL, true)}
-                    </small>
                   </td>
                   <td>
-                    <span className={getPerformanceClass(asset.variacao24h)}>
-                      {formatPercentage(asset.variacao24h, true)}
-                    </span>
+                    {absolutePnl === null || !quoteAvailable ? (
+                      <>
+                        <strong className="performance performance--neutral">—</strong>
+                        <small>Sem cotação</small>
+                      </>
+                    ) : (
+                      <>
+                        <strong className={getPerformanceClass(absolutePnl)}>
+                          {formatUsdTotal(absolutePnl)}
+                        </strong>
+                        <small className={getPerformanceClass(asset.porcentagemPNL)}>
+                          {formatPercentage(asset.porcentagemPNL, true)}
+                        </small>
+                      </>
+                    )}
                   </td>
                   <td>
-                    <div className="participation-cell">
-                      <span>{formatPercentage(participation)}</span>
-                      <span className="participation-track" aria-hidden="true">
-                        <span style={{ width: `${Math.min(participation, 100)}%` }} />
+                    {quoteAvailable ? (
+                      <span className={getPerformanceClass(asset.variacao24h)}>
+                        {formatPercentage(asset.variacao24h, true)}
                       </span>
-                    </div>
+                    ) : (
+                      <span className="performance performance--neutral">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {participation === null ? (
+                      <span className="performance performance--neutral">—</span>
+                    ) : (
+                      <div className="participation-cell">
+                        <span>{formatPercentage(participation)}</span>
+                        <span className="participation-track" aria-hidden="true">
+                          <span style={{ width: `${Math.min(participation, 100)}%` }} />
+                        </span>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )

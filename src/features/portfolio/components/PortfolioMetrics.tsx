@@ -12,13 +12,16 @@ type PortfolioMetricsProps = {
 export function PortfolioMetrics({ summary }: PortfolioMetricsProps) {
   const investedCost = summary.valorTotalCarteira - summary.pnlGeral
   const totalReturn = investedCost > 0 ? (summary.pnlGeral / investedCost) * 100 : 0
+  const partialDataNote = summary.cotacoesParciais
+    ? 'Somente posições com cotação disponível'
+    : null
 
   return (
     <div className="portfolio-metrics" aria-label="Indicadores da carteira">
       <article className="portfolio-metric portfolio-metric--featured">
         <span>Patrimônio atual</span>
         <strong>{formatUsdTotal(summary.valorTotalCarteira)}</strong>
-        <small>Valor de mercado consolidado</small>
+        <small>{partialDataNote ?? 'Valor de mercado consolidado'}</small>
       </article>
 
       <article className="portfolio-metric">
@@ -26,7 +29,7 @@ export function PortfolioMetrics({ summary }: PortfolioMetricsProps) {
         <strong className={getPerformanceClass(summary.pnlGeral)}>
           {formatUsdTotal(summary.pnlGeral)}
         </strong>
-        <small>Resultado das posições abertas</small>
+        <small>{partialDataNote ?? 'Resultado das posições abertas'}</small>
       </article>
 
       <article className="portfolio-metric">
@@ -34,7 +37,7 @@ export function PortfolioMetrics({ summary }: PortfolioMetricsProps) {
         <strong className={getPerformanceClass(totalReturn)}>
           {formatPercentage(totalReturn, true)}
         </strong>
-        <small>Em relação ao custo das posições</small>
+        <small>{partialDataNote ?? 'Em relação ao custo das posições'}</small>
       </article>
 
       <article className="portfolio-metric">
@@ -42,7 +45,7 @@ export function PortfolioMetrics({ summary }: PortfolioMetricsProps) {
         <strong className={getPerformanceClass(summary.variacao24hCarteira)}>
           {formatPercentage(summary.variacao24hCarteira, true)}
         </strong>
-        <small>Movimento ponderado da carteira</small>
+        <small>{partialDataNote ?? 'Movimento ponderado da carteira'}</small>
       </article>
     </div>
   )

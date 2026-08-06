@@ -40,6 +40,58 @@
   font-size: 0.76rem;
 }
 
+
+.portfolio-quote-status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(245, 185, 95, 0.3);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 0 0, rgba(245, 185, 95, 0.12), transparent 42%),
+    rgba(33, 28, 20, 0.72);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+.portfolio-quote-status__icon {
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border: 1px solid rgba(245, 185, 95, 0.34);
+  border-radius: 0.75rem;
+  color: #ffd792;
+  background: rgba(245, 185, 95, 0.1);
+  font-weight: 900;
+}
+
+.portfolio-quote-status__content {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.portfolio-quote-status__content strong {
+  color: #fff0d1;
+  font-size: 0.9rem;
+}
+
+.portfolio-quote-status__content p {
+  margin: 0;
+  color: #b9aa91;
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.portfolio-quote-status__content b {
+  color: #f6d39b;
+}
+
+.portfolio-quote-status__action {
+  white-space: nowrap;
+}
+
 .portfolio-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -146,6 +198,30 @@
   background: rgba(255, 255, 255, 0.025);
   font-size: 0.7rem;
   font-weight: 700;
+}
+
+
+.distribution-empty-state {
+  display: grid;
+  min-height: 20rem;
+  place-items: center;
+  align-content: center;
+  gap: 0.55rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.distribution-empty-state strong {
+  color: #e8eff8;
+  font-size: 1rem;
+}
+
+.distribution-empty-state p {
+  max-width: 30rem;
+  margin: 0;
+  color: #7f8fa6;
+  font-size: 0.76rem;
+  line-height: 1.6;
 }
 
 .distribution-content {
@@ -337,6 +413,19 @@
   font-size: 0.66rem;
 }
 
+
+.portfolio-table__row--unavailable {
+  background: rgba(245, 185, 95, 0.018);
+}
+
+.portfolio-quote-unavailable {
+  color: #d8b97e !important;
+}
+
+.portfolio-quote-note--stale {
+  color: #d8b97e !important;
+}
+
 .portfolio-asset-identity {
   display: flex;
   align-items: center;
@@ -489,6 +578,15 @@
 }
 
 @media (max-width: 680px) {
+  .portfolio-quote-status {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .portfolio-quote-status__action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .portfolio-heading__actions {
     width: 100%;
   }

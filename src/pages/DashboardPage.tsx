@@ -3,21 +3,23 @@ import { ApiErrorAlert } from '../components/ApiErrorAlert.tsx'
 import { PortfolioAssetTable } from '../features/portfolio/components/PortfolioAssetTable.tsx'
 import { PortfolioDistribution } from '../features/portfolio/components/PortfolioDistribution.tsx'
 import { PortfolioMetrics } from '../features/portfolio/components/PortfolioMetrics.tsx'
+import { PortfolioQuoteStatus } from '../features/portfolio/components/PortfolioQuoteStatus.tsx'
 import { PortfolioSkeleton } from '../features/portfolio/components/PortfolioSkeleton.tsx'
 import { usePortfolioSummary } from '../features/portfolio/hooks/use-portfolio-summary.ts'
+import { formatQuoteDateTime } from '../features/portfolio/utils/portfolio-formatters.ts'
+import { hasAvailableQuote } from '../features/portfolio/utils/portfolio-quotes.ts'
 import { getApiErrorMessage } from '../services/api-error.ts'
 import '../features/portfolio/portfolio.css'
-
-const updateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-})
 
 export function DashboardPage() {
   const portfolioQuery = usePortfolioSummary()
   const summary = portfolioQuery.data
   const hasAssets = Boolean(summary?.ativos.length)
+  const quotedAssets = summary?.ativos.filter(hasAvailableQuote) ?? []
+  const largestPosition = [...quotedAssets].sort(
+    (first, second) => second.valorTotalUSD - first.valorTotalUSD,
+  )[0]
+  const positiveAssets = quotedAssets.filter((asset) => asset.porcentagemPNL > 0).length
 
   return (
     <section className="portfolio-page">
@@ -80,11 +82,18 @@ export function DashboardPage() {
         <>
           <div className="portfolio-update-row">
             <span>
-              Dados atualizados às{' '}
-              {updateTimeFormatter.format(new Date(portfolioQuery.dataUpdatedAt))}
+              {summary.cotacoesAtualizadasEm
+                ? `Cotações atualizadas em ${formatQuoteDateTime(summary.cotacoesAtualizadasEm)}`
+                : 'Horário das cotações indisponível'}
             </span>
             <span>Cotações e valores apresentados em USD</span>
           </div>
+
+          <PortfolioQuoteStatus
+            summary={summary}
+            isRefreshing={portfolioQuery.isFetching}
+            onRefresh={() => portfolioQuery.refetch()}
+          />
 
           <PortfolioMetrics summary={summary} />
 
@@ -104,18 +113,14 @@ export function DashboardPage() {
 
               <div className="portfolio-insight__content">
                 <div>
-                  <span>Maior posição</span>
-                  <strong>
-                    {[...summary.ativos].sort(
-                      (first, second) => second.valorTotalUSD - first.valorTotalUSD,
-                    )[0]?.ticker ?? '—'}
-                  </strong>
+                  <span>Maior posição cotada</span>
+                  <strong>{largestPosition?.ticker ?? '—'}</strong>
                 </div>
                 <div>
-                  <span>Ativos com resultado positivo</span>
+                  <span>Ativos cotados com resultado positivo</span>
                   <strong>
-                    {summary.ativos.filter((asset) => asset.porcentagemPNL > 0).length}
-                    <small> de {summary.ativos.length}</small>
+                    {positiveAssets}
+                    <small> de {quotedAssets.length}</small>
                   </strong>
                 </div>
                 <div>
@@ -126,7 +131,8 @@ export function DashboardPage() {
 
               <p className="portfolio-insight__note">
                 O preço médio e o saldo são reconstruídos com base nas operações da sua
-                conta. As cotações atuais são consultadas pelo backend.
+                conta. Indicadores de mercado consideram somente ativos com cotação
+                disponível.
               </p>
             </article>
           </div>

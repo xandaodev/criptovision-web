@@ -32,6 +32,8 @@ const usdFormatter = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 })
 
+const EMPTY_TRANSACTIONS: Transaction[] = []
+
 export function TransactionsPage() {
   const transactionsQuery = useTransactions()
   const createMutation = useCreateTransaction()
@@ -46,7 +48,7 @@ export function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'TODAS' | TransactionType>('TODAS')
   const [feedback, setFeedback] = useState<Feedback>(null)
 
-  const transactions = transactionsQuery.data ?? []
+  const transactions = transactionsQuery.data ?? EMPTY_TRANSACTIONS
 
   const filteredTransactions = useMemo(() => {
     const normalizedSearch = search.trim().toUpperCase()

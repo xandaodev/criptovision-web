@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { PortfolioAsset } from '../types/portfolio.ts'
 import { formatPercentage, formatUsdTotal } from '../utils/portfolio-formatters.ts'
+import { hasAvailableQuote } from '../utils/portfolio-quotes.ts'
 
 type PortfolioDistributionProps = {
   assets: PortfolioAsset[]
@@ -22,9 +23,10 @@ export function PortfolioDistribution({
   assets,
   totalValue,
 }: PortfolioDistributionProps) {
-  const orderedAssets = [...assets].sort(
-    (first, second) => second.valorTotalUSD - first.valorTotalUSD,
-  )
+  const orderedAssets = assets
+    .filter(hasAvailableQuote)
+    .filter((asset) => asset.valorTotalUSD > 0)
+    .sort((first, second) => second.valorTotalUSD - first.valorTotalUSD)
 
   let accumulatedPercentage = 0
   const gradientStops = orderedAssets.map((asset, index) => {
@@ -46,43 +48,57 @@ export function PortfolioDistribution({
           <span className="panel-kicker">Composição</span>
           <h2>Distribuição da carteira</h2>
         </div>
-        <span className="asset-count">{assets.length} ativos</span>
+        <span className="asset-count">
+          {orderedAssets.length === assets.length
+            ? `${assets.length} ativos`
+            : `${orderedAssets.length} de ${assets.length} ativos`}
+        </span>
       </header>
 
-      <div className="distribution-content">
-        <div
-          className="distribution-chart"
-          style={chartStyle}
-          role="img"
-          aria-label="Gráfico de distribuição dos ativos da carteira"
-        >
-          <div className="distribution-chart__center">
-            <strong>{assets.length}</strong>
-            <span>ativos</span>
+      {orderedAssets.length === 0 ? (
+        <div className="distribution-empty-state">
+          <strong>Distribuição temporariamente indisponível</strong>
+          <p>
+            Nenhuma posição possui cotação utilizável neste momento. Os saldos seguem
+            preservados na tabela abaixo.
+          </p>
+        </div>
+      ) : (
+        <div className="distribution-content">
+          <div
+            className="distribution-chart"
+            style={chartStyle}
+            role="img"
+            aria-label="Gráfico de distribuição dos ativos com cotação disponível"
+          >
+            <div className="distribution-chart__center">
+              <strong>{orderedAssets.length}</strong>
+              <span>cotados</span>
+            </div>
+          </div>
+
+          <div className="distribution-legend">
+            {orderedAssets.map((asset, index) => {
+              const participation =
+                totalValue > 0 ? (asset.valorTotalUSD / totalValue) * 100 : 0
+
+              return (
+                <div className="distribution-legend__item" key={asset.ticker}>
+                  <span
+                    className="distribution-legend__color"
+                    style={{ backgroundColor: chartColors[index % chartColors.length] }}
+                  />
+                  <div>
+                    <strong>{asset.ticker}</strong>
+                    <small>{formatUsdTotal(asset.valorTotalUSD)}</small>
+                  </div>
+                  <span>{formatPercentage(participation)}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
-
-        <div className="distribution-legend">
-          {orderedAssets.map((asset, index) => {
-            const participation =
-              totalValue > 0 ? (asset.valorTotalUSD / totalValue) * 100 : 0
-
-            return (
-              <div className="distribution-legend__item" key={asset.ticker}>
-                <span
-                  className="distribution-legend__color"
-                  style={{ backgroundColor: chartColors[index % chartColors.length] }}
-                />
-                <div>
-                  <strong>{asset.ticker}</strong>
-                  <small>{formatUsdTotal(asset.valorTotalUSD)}</small>
-                </div>
-                <span>{formatPercentage(participation)}</span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      )}
     </article>
   )
 }

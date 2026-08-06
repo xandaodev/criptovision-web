@@ -11,6 +11,7 @@ export function AppLayout() {
         <Brand />
         <nav className="app-nav" aria-label="Navegação principal">
           <NavLink to="/app/dashboard">Dashboard</NavLink>
+          <NavLink to="/app/transacoes">Transações</NavLink>
         </nav>
         <button className="button button--ghost" type="button" onClick={signOut}>
           Sair

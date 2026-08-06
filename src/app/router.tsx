@@ -6,6 +6,7 @@ import { DashboardPage } from '../pages/DashboardPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
 import { RegisterPage } from '../pages/RegisterPage.tsx'
+import { TransactionsPage } from '../pages/TransactionsPage.tsx'
 
 export const router = createBrowserRouter([
   {
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="dashboard" replace /> },
           { path: 'dashboard', element: <DashboardPage /> },
+          { path: 'transacoes', element: <TransactionsPage /> },
         ],
       },
     ],

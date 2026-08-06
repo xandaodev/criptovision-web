@@ -1,37 +1,142 @@
-import { useQuery } from '@tanstack/react-query'
-import { sessionService } from '../services/session-service.ts'
+import { Link } from 'react-router'
+import { ApiErrorAlert } from '../components/ApiErrorAlert.tsx'
+import { PortfolioAssetTable } from '../features/portfolio/components/PortfolioAssetTable.tsx'
+import { PortfolioDistribution } from '../features/portfolio/components/PortfolioDistribution.tsx'
+import { PortfolioMetrics } from '../features/portfolio/components/PortfolioMetrics.tsx'
+import { PortfolioSkeleton } from '../features/portfolio/components/PortfolioSkeleton.tsx'
+import { usePortfolioSummary } from '../features/portfolio/hooks/use-portfolio-summary.ts'
 import { getApiErrorMessage } from '../services/api-error.ts'
+import '../features/portfolio/portfolio.css'
+
+const updateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+})
 
 export function DashboardPage() {
-  const sessionQuery = useQuery({
-    queryKey: ['session-validation'],
-    queryFn: sessionService.validate,
-  })
+  const portfolioQuery = usePortfolioSummary()
+  const summary = portfolioQuery.data
+  const hasAssets = Boolean(summary?.ativos.length)
 
   return (
-    <section className="dashboard-placeholder">
-      <span className="eyebrow">Área protegida</span>
-      <h1>Seu novo dashboard começa aqui.</h1>
-      <p>
-        A autenticação já está conectada à API. Na próxima etapa, esta tela receberá
-        transações, patrimônio, PNL e a composição da carteira.
-      </p>
-
-      <div className="session-card">
-        <span className={`status-dot ${sessionQuery.isError ? 'status-dot--error' : ''}`} />
+    <section className="portfolio-page">
+      <header className="portfolio-heading">
         <div>
-          <strong>
-            {sessionQuery.isPending && 'Validando sua sessão...'}
-            {sessionQuery.isSuccess && 'Sessão validada pela API'}
-            {sessionQuery.isError && 'API indisponível'}
-          </strong>
-          <small>
-            {sessionQuery.isError
-              ? getApiErrorMessage(sessionQuery.error)
-              : 'Seu token está sendo enviado somente para endpoints protegidos.'}
-          </small>
+          <span className="eyebrow">Visão da carteira</span>
+          <h1>Seu patrimônio, em uma única leitura.</h1>
+          <p>
+            Acompanhe posições, preços médios, resultado não realizado e exposição de
+            cada ativo.
+          </p>
         </div>
-      </div>
+
+        <div className="portfolio-heading__actions">
+          <Link className="button button--ghost" to="/app/transacoes">
+            Ver transações
+          </Link>
+          <button
+            className="button button--primary"
+            type="button"
+            onClick={() => portfolioQuery.refetch()}
+            disabled={portfolioQuery.isFetching}
+          >
+            {portfolioQuery.isFetching ? 'Atualizando...' : 'Atualizar dados'}
+          </button>
+        </div>
+      </header>
+
+      {portfolioQuery.isPending && <PortfolioSkeleton />}
+
+      {portfolioQuery.isError && (
+        <div className="portfolio-error-state">
+          <ApiErrorAlert message={getApiErrorMessage(portfolioQuery.error)} />
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={() => portfolioQuery.refetch()}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {portfolioQuery.isSuccess && summary && !hasAssets && (
+        <article className="portfolio-empty-state">
+          <span className="portfolio-empty-state__mark">CV</span>
+          <span className="eyebrow">Carteira vazia</span>
+          <h2>Registre sua primeira compra.</h2>
+          <p>
+            O dashboard será calculado automaticamente a partir do seu histórico de
+            compras e vendas.
+          </p>
+          <Link className="button button--primary" to="/app/transacoes">
+            Cadastrar primeira transação
+          </Link>
+        </article>
+      )}
+
+      {portfolioQuery.isSuccess && summary && hasAssets && (
+        <>
+          <div className="portfolio-update-row">
+            <span>
+              Dados atualizados às{' '}
+              {updateTimeFormatter.format(new Date(portfolioQuery.dataUpdatedAt))}
+            </span>
+            <span>Cotações e valores apresentados em USD</span>
+          </div>
+
+          <PortfolioMetrics summary={summary} />
+
+          <div className="portfolio-overview-grid">
+            <PortfolioDistribution
+              assets={summary.ativos}
+              totalValue={summary.valorTotalCarteira}
+            />
+
+            <article className="portfolio-panel portfolio-insight">
+              <header className="portfolio-panel__header">
+                <div>
+                  <span className="panel-kicker">Leitura rápida</span>
+                  <h2>Contexto da carteira</h2>
+                </div>
+              </header>
+
+              <div className="portfolio-insight__content">
+                <div>
+                  <span>Maior posição</span>
+                  <strong>
+                    {[...summary.ativos].sort(
+                      (first, second) => second.valorTotalUSD - first.valorTotalUSD,
+                    )[0]?.ticker ?? '—'}
+                  </strong>
+                </div>
+                <div>
+                  <span>Ativos com resultado positivo</span>
+                  <strong>
+                    {summary.ativos.filter((asset) => asset.porcentagemPNL > 0).length}
+                    <small> de {summary.ativos.length}</small>
+                  </strong>
+                </div>
+                <div>
+                  <span>Fonte dos cálculos</span>
+                  <strong>Seu histórico</strong>
+                </div>
+              </div>
+
+              <p className="portfolio-insight__note">
+                O preço médio e o saldo são reconstruídos com base nas operações da sua
+                conta. As cotações atuais são consultadas pelo backend.
+              </p>
+            </article>
+          </div>
+
+          <PortfolioAssetTable
+            assets={summary.ativos}
+            totalValue={summary.valorTotalCarteira}
+          />
+        </>
+      )}
     </section>
   )
 }
